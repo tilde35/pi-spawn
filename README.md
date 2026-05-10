@@ -1,63 +1,72 @@
+<div align="center">
+
 # pi-spawn
 
-> Minimal subagent extension for the pi coding agent — isolated in-process tasks with a fresh context window.
+**Spawn sub-agents. Keep your context clean.**
 
-## Install
+[![npm version](https://img.shields.io/npm/v/pi-spawn?color=blue&logo=npm)](https://www.npmjs.com/package/pi-spawn)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![pi package](https://img.shields.io/badge/pi-package-%23f472b6)](https://github.com/badlogic/pi-mono)
+
+</div>
+
+Sub-agents exist for one reason: **context compression.**
+
+A spawned agent can burn 150,000 tokens on research, reading files, and searching. It returns a few thousand tokens of synthesis. Your main agent's context stays lean and focused — no bloat, no attention decay, no critical constraints pushed into the noise floor.
 
 ```bash
 pi install npm:pi-spawn
 ```
 
-## What it does
+---
 
-`pi-spawn` adds a single `spawn` tool. Each call creates an isolated, in-process subagent session that runs one focused task and returns structured results. The subagent gets a completely fresh context window — it has zero access to your parent conversation history, so every file path, pattern, and requirement must be stated in the prompt.
+## Why context hygiene matters
 
-There is no batching API and no concurrency parameter. The orchestrator (you, the calling model) controls concurrency naturally through your tool call pattern. Fire one `spawn` for a single task, fire several in one turn for parallel work, or chain them sequentially when steps depend on each other. pi's execution engine handles the rest.
+Context windows lie. Advertised capacity is 200K tokens. Reliable attention tops out at 60–120K. Transformers have a U-shaped attention curve — information in the middle gets skimmed or ignored entirely.
 
-## Concurrency model
+Every file your agent reads, every search result it processes, pushes your actual task constraints deeper into that dead zone. Sub-agents fix this: they do the heavy lifting in isolation, then return a tight summary.
 
-| Pattern | When to use it | How |
-|---------|---------------|-----|
-| **Single** | One focused task | Call `spawn` once |
-| **Parallel** | Independent tasks | Fire multiple `spawn` calls in one turn |
-| **Serial** | Step B needs Step A's output | Call `spawn`, wait for result, then call again |
-| **Mixed** | Scout then build | Parallel scouts → parent merges findings → serial implementation |
+The result: your orchestrator agent holds only what it needs. First-iteration accuracy goes up. Token waste goes down.
 
-**Rule:** if spawn A's output feeds spawn B, use serial. Never fire both in one turn and hope A finishes first.
+---
 
-## When to spawn vs when NOT to spawn
+## How it works
 
-**Spawn** when a task has a different focus than the parent and benefits from isolation: fresh code review, parallel reconnaissance across a codebase, research, validation, or non-trivial code generation where you do **not** already know the exact implementation.
+Tell your agent to spawn a sub-agent for focused work:
 
-**Do NOT spawn** if you know the exact implementation — write the file directly instead.
+> Spawn a sub-agent to review `src/auth.ts` for security issues. Get a fresh perspective.
 
-**Empty-shell test:** If removing the inline code from your prompt leaves an empty prompt, you are just dictating variable names line-by-line. Write the file directly.
+Your agent calls `spawn` once. A clean sub-agent reviews the file and returns findings. Your main context never sees the raw file — just the synthesis.
 
-## Security model
+> Spawn three sub-agents in parallel: find all model definitions, all route registrations, and all tool configurations.
 
-- **Tool inheritance:** The child inherits the parent's currently active built-in tool subset. If the parent is in a restricted mode (for example read-only plan mode), the child inherits that restriction.
-- **Recursion guard:** The `spawn` extension is explicitly excluded from the subagent's loaded extensions, preventing nested self-spawn.
-- **Same permissions:** Spawned agents run with the same model credentials and permissions as the parent.
+Your agent fires three `spawn` calls in one turn. pi runs them concurrently. Results come back together — each sub-agent's noise stays in its own sandbox.
 
-## Usage examples
+> Spawn a sub-agent to research the best retry strategy for fetch, then implement it.
 
-- "Spawn a subagent to review `src/auth.ts` for security issues"
-- "Spawn three subagents in parallel: one to find all model definitions, one to find all provider configs, one to find all tool registrations"
-- "Spawn a subagent to research the best retry strategy for fetch, then implement it"
-- "Spawn a subagent to read `src/db/schema.ts` and validate that all foreign keys have matching indexes"
+Agent spawns research, gets a synthesis, spawns implementation with the findings. Two isolated contexts, one clean orchestrator.
 
-## Configuration
+No batching API. No concurrency knob. No scheduling. Your agent calls `spawn` as many times as the task needs — once, N in parallel, or chained. You control the strategy.
 
-You can optionally override the thinking level for a single subagent via the `thinking` parameter:
+---
 
-```
-spawn({
-  prompt: "Refactor the error handling in src/api/client.ts",
-  thinking: "high"
-})
-```
+## What's inside a spawned agent
 
-If omitted, the subagent defaults to the parent's current thinking level.
+- **Same tools** as your main agent (read, write, edit, bash, grep)
+- **Same model and credentials** — plug and play
+- **Zero context** — no history from your main session
+- **Your thinking level** — override per spawn if needed
+- **No nesting** — spawn is blocked inside sub-agents
+
+---
+
+## Why this exists
+
+`pi-spawn` is the minimal spawn tool. If you need persistent agent memory, cron scheduling, custom agent types, cross-agent RPC, or worktree isolation — check out [`@tintinweb/pi-subagents`](https://agenticoding.ai/docs/methodology/lesson-5-grounding). It's excellent software.
+
+If you want a single sharp tool that keeps your context clean — stay here.
+
+---
 
 ## License
 
