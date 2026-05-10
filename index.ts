@@ -18,7 +18,7 @@ import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { Api, Message, Model } from "@earendil-works/pi-ai";
+import type { Message, Model } from "@earendil-works/pi-ai";
 import { StringEnum } from "@earendil-works/pi-ai";
 import {
 	DEFAULT_MAX_BYTES,
@@ -541,7 +541,7 @@ export default function (pi: ExtensionAPI) {
 			let text = icon + " " + theme.fg("toolTitle", "spawn");
 			let hasExpandHint = false;
 			if (isError) {
-				text += "\n" + theme.fg("error", r.error ?? "unknown error");
+				text += "\n" + theme.fg("error", r.error as string);
 			} else {
 				const lines = r.output ? r.output.split("\n") : [];
 				const COLLAPSED_PREVIEW = 10;
