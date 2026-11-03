@@ -28,6 +28,7 @@ import {
 	type ModelRegistry,
 	type TruncationResult,
 	DefaultResourceLoader,
+	ModelRuntime,
 	createAgentSession,
 	defineTool,
 	formatSize,
@@ -283,13 +284,24 @@ async function runOne(
 		},
 	});
 
+	// Pi 1.x uses modelRuntime; the old modelRegistry SDK option is ignored.
+	// Carry extension providers into the child runtime.
+	const modelRuntime = await ModelRuntime.create();
+	for (const providerId of modelRegistry.getRegisteredProviderIds()) {
+		const nativeProvider = modelRegistry.getRegisteredNativeProvider(providerId);
+		if (nativeProvider) modelRuntime.registerNativeProvider(nativeProvider);
+		const config = modelRegistry.getRegisteredProviderConfig(providerId);
+		if (config) modelRuntime.registerProvider(providerId, config);
+	}
+	await modelRuntime.refresh({ allowNetwork: false });
+
 	const { session } = await createAgentSession({
 		cwd,
 		sessionManager: SessionManager.inMemory(cwd),
 		tools: [...inheritedTools],
 		customTools: [returnResultTool],
 		model: parentModel,
-		modelRegistry,
+		modelRuntime,
 		thinkingLevel: thinking,
 		resourceLoader,
 		settingsManager,
